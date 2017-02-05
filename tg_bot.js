@@ -8,7 +8,7 @@ var TelegramBot = function ({token, polling_invt = 1000}) {
             'Content-type',
              config.sendfile ? 'multipart/form-data' : 'application/json'
           );
-          xhr.send(JSON.stringify(config.data));
+          xhr.send(config.sendfile ? config.data : JSON.stringify(config.data));
           xhr.onerror = function() {
             reject({ok: false, err: xhr.statusText});
           };
@@ -25,6 +25,14 @@ var TelegramBot = function ({token, polling_invt = 1000}) {
             });
           };
         });
+      },
+      Exception = function ({name, message}) {
+        return {
+          name, message,
+          toString: function () {
+            return this.name + ': ' + this.message;
+          }
+        };
       },
       msg_handler, api_handler, err_handler, inline_handler, inlinesel_handler,
       callback_handler, poller = -1, offset = 0,
@@ -88,20 +96,14 @@ var TelegramBot = function ({token, polling_invt = 1000}) {
     api: apis,
     bot: {
       start () {
-        if (!msg_handler || !api_handler || !err_handler) throw {
+        if (!msg_handler || !api_handler || !err_handler) throw new Exception({
           name: 'HandlerError',
-          message: 'Handler for message, API respond, or API error was not defined.',
-          toString: function () {
-            return this.name + ': ' + this.message;
-          }
-        };
-        if(poller > 0) throw {
+          message: 'Need message handler, api handler, and error handler must be set to start the bot.'
+        });
+        if(poller > 0) throw new Exception({
           name: 'BotError',
-          message: 'Try to start a bot that was not started.',
-          toString: function () {
-            return this.name + ': ' + this.message;
-          }
-        };
+          message: 'Try to start a bot that was not started.'
+        });
         poller = window.setInterval(() => {
           request({data: {offset}, method: 'getUpdates'})
             .then(res => {
@@ -125,13 +127,10 @@ var TelegramBot = function ({token, polling_invt = 1000}) {
           window.clearInterval(poller);
           poller = -1;
         }
-        else throw {
+        else throw new Exception({
           name: 'BotError',
-          message: 'Try to stop a bot that was not started.',
-          toString: function () {
-            return this.name + ': ' + this.message;
-          }
-        };
+          message: 'Try to stop a bot that was not started.'
+        });
       }
     }
   };
